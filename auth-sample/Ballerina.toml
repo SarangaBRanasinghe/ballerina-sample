@@ -1,0 +1,9 @@
+[package]
+org = "tikiricare"
+name = "auth_sample"  # use underscore, no dashes or spaces
+version = "0.1.0"
+
+[dependencies]
+ballerina.jwt = "2.15.0"
+ballerina.http = "*"
+ballerina.time = "*"
