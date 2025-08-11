@@ -1,6 +1,5 @@
 import ballerina/http;
 import ballerina/jwt;
-
 import ballerina/time;
 
 final string SECRET = "supersecretkey";
@@ -16,6 +15,38 @@ type LoginRequest record {
 };
 
 service /auth on new http:Listener(8080) {
+
+    resource function post register(http:Request req) returns http:Response|error {
+        json|error payload = req.getJsonPayload();
+        if (payload is error) {
+            http:Response res = new;
+            res.statusCode = 400;
+            res.setJsonPayload({ "error": "Invalid JSON" });
+            return res;
+        }
+
+        LoginRequest|error newUser = payload.cloneWithType(LoginRequest);
+        if (newUser is error) {
+            http:Response res = new;
+            res.statusCode = 400;
+            res.setJsonPayload({ "error": "Invalid data format" });
+            return res;
+        }
+
+        if (userStore.hasKey(newUser.email)) {
+            http:Response res = new;
+            res.statusCode = 409; // Conflict
+            res.setJsonPayload({ "error": "User already exists" });
+            return res;
+        }
+
+        userStore[newUser.email] = newUser.password;
+
+        http:Response res = new;
+        res.statusCode = 201; // Created
+        res.setJsonPayload({ "message": "User registered successfully" });
+        return res;
+    }
 
     resource function post login(http:Request req) returns http:Response|error {
         json|error payload = req.getJsonPayload();
@@ -42,10 +73,9 @@ service /auth on new http:Listener(8080) {
                 username: loginReq.email,
                 expTime: exp,
                 signatureConfig: {
-    algorithm: jwt:HS256,
-  config: SECRET
-}
-
+                    algorithm: jwt:HS256,
+                    config: SECRET
+                }
             };
 
             string|error token = jwt:issue(issuerConfig);
